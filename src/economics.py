@@ -1,11 +1,6 @@
 """Economic evaluation: KEPCO power-factor penalty, financial ROI, realtime cost.
 
-Ported from notebook cells 78 (monthly PF penalty), 79 (regulation-form PF
-columns / defense), 82 (advanced ROI), 96 (vectorized realtime energy cost),
-and 91-92 (final KEPCO-ready dataframe).
-
-Plotting from the original cells is intentionally omitted (kept in EDA notebooks);
-the pure computations the pipeline depends on are preserved.
+Pure computations only; visualization lives in the EDA notebooks.
 """
 from __future__ import annotations
 
@@ -14,14 +9,16 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
+from . import psi
+
 
 # ---------------------------------------------------------------------------
-# 1) 월별 한전 역률 페널티 (기본요금 가감률) — cell 78
+# 1) 월별 한전 역률 페널티 (기본요금 가감률)
 # ---------------------------------------------------------------------------
 def calculate_monthly_kepco_pf_penalty(
     df_result: pd.DataFrame, scenario_config: dict, verbose: bool = False
 ) -> pd.DataFrame:
-    """월별 지상(낮)/진상(밤) 역률과 기본요금 증감률(%)을 산출 (cell 78).
+    """월별 지상(낮)/진상(밤) 역률과 기본요금 증감률(%)을 산출.
 
     AI 가정: 사용량(P)만 AI_Usage_kWh로 바뀌고 무효전력(Q)은 원본 kvarh 유지.
     """
@@ -93,7 +90,7 @@ def calculate_monthly_kepco_pf_penalty(
 
 
 # ---------------------------------------------------------------------------
-# 2) 규정형 PF 컬럼 생성 + 방어율 검증 — cell 79
+# 2) 규정형 PF 컬럼 생성 + 방어율 검증
 # ---------------------------------------------------------------------------
 def analyze_kepco_pf_defense(
     df_result: pd.DataFrame,
@@ -103,7 +100,7 @@ def analyze_kepco_pf_defense(
     lead_th: float = 0.95,
     verbose: bool = False,
 ) -> pd.DataFrame:
-    """규정형(시간대별 지상/진상 분리) PF 컬럼을 df에 추가하고 반환 (cell 79, plot 제외).
+    """규정형(시간대별 지상/진상 분리) PF 컬럼을 df에 추가하고 반환 (plot 제외).
 
     낮(지상): PF = P / sqrt(P^2 + Q_lag^2);  밤(진상): PF = P / sqrt(P^2 + Q_lead^2).
     AI는 Usage만 AI로 바뀌고 Q는 원본 유지하는 보수 가정.
@@ -147,12 +144,12 @@ def analyze_kepco_pf_defense(
 
 
 # ---------------------------------------------------------------------------
-# 3) 고도화된 재무 ROI — cell 82
+# 3) 고도화된 재무 ROI
 # ---------------------------------------------------------------------------
 def calculate_advanced_financial_roi(
     df_result: pd.DataFrame, scenario_config: dict, labor_premium: float = 20.0
 ) -> Dict[str, float]:
-    """월 누적 역률 기반 기본요금 가감을 반영한 재무 평가 (cell 82)."""
+    """월 누적 역률 기반 기본요금 가감을 반영한 재무 평가."""
     base_rate = scenario_config["base_rate"]
     time_col = "hour" if "hour" in df_result.columns else "Hour"
 
@@ -226,7 +223,7 @@ def calculate_advanced_financial_roi(
 
 
 # ---------------------------------------------------------------------------
-# 4) 벡터화 실시간 전력량 요금 — cell 96
+# 4) 벡터화 실시간 전력량 요금
 # ---------------------------------------------------------------------------
 def append_realtime_energy_cost_dynamic(
     df: pd.DataFrame,
@@ -234,7 +231,7 @@ def append_realtime_energy_cost_dynamic(
     usage_col: str = "Usage_kWh",
     ai_usage_col: str = "AI_Usage_kWh",
 ) -> pd.DataFrame:
-    """config의 단가표를 읽어 15분 단위 실시간 전력량 요금을 벡터 연산 (cell 96)."""
+    """config의 단가표를 읽어 15분 단위 실시간 전력량 요금을 벡터 연산."""
     df = df.copy()
 
     if "Month" not in df.columns:
@@ -281,10 +278,16 @@ def append_realtime_energy_cost_dynamic(
 
 
 # ---------------------------------------------------------------------------
-# 5) 최종 KEPCO-ready DF (PF 컬럼 + 월 페널티 merge + 플래그) — cells 91-92
+# 5) 최종 KEPCO-ready DF (PF 컬럼 + 월 페널티 merge + 플래그)
 # ---------------------------------------------------------------------------
 def build_final_kepco_df(df_opt: pd.DataFrame, scenario_config: dict) -> pd.DataFrame:
-    """규정형 PF 컬럼 + 월별 PF/페널티 + HourType/페널티 플래그가 결합된 DF (cells 91-92)."""
+    """규정형 PF 컬럼 + 월별 PF/페널티 + HourType/페널티 플래그가 결합된 최종 DF.
+
+    PF 컬럼 산출 전에 AI PSI 재구성 컬럼(AI_PSI 및 AI 물리량)을 먼저 부여하여
+    최종 산출물에 포함시킨다.
+    """
+    original_max_values = psi.get_psi_baseline_maxima(df_opt)
+    df_opt = psi.calculate_psi_comparison(df_opt, original_max_values)
     df_pf = analyze_kepco_pf_defense(df_opt)
     monthly_df = calculate_monthly_kepco_pf_penalty(df_pf, scenario_config).reset_index()
     final_df = df_pf.merge(monthly_df, on="Month", how="left")
