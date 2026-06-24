@@ -29,7 +29,7 @@ steel-energy-optimization/
 │   ├─ surrogate_model.py    Usage_kWh·PF_Physical XGBoost 학습/저장/평가
 │   ├─ simulator.py          HybridFastSimulator (그리드 사전연산 + Optuna 미세조정)
 │   ├─ economics.py          한전 역률 페널티·재무 ROI·실시간 요금
-│   ├─ settlement.py         전압/요금제 조합 최저비용 정산 (kepco_bill 슬롯)
+│   ├─ settlement.py         전압/요금제 조합 최저비용 정산 (kepco_bill 구현)
 │   └─ dashboard_export.py   대시보드용 스트리밍 CSV 생성
 ├─ scripts/        # 실행 진입점 (순서대로)
 │   ├─ 01_build_features.py
@@ -37,10 +37,12 @@ steel-energy-optimization/
 │   ├─ 03_run_optimization.py
 │   ├─ 04_evaluate_roi.py
 │   └─ 05_export_dashboard.py
-├─ dashboard/      # Flask 실시간 대시보드
-│   ├─ app.py      서버(SSE 스트림 + 월별 비용 + KAU25 공공API)
+├─ dashboard/      # Flask 실시간 대시보드 (두 앱을 각각 실행)
+│   ├─ app.py      전기료·CO2 서버(SSE 스트림 + 월별 비용 + KAU25 공공API) :5001
 │   ├─ sender.py   결과 CSV를 1초 간격으로 /ingest 에 송신
 │   ├─ static/  templates/
+│   └─ process_app/   # 공정 흐름 전용 서버 :4444 (별도 실행)
+│       ├─ app.py  static/  templates/
 └─ notebooks/      # 탐색적 분석(EDA)·시각화 노트북
 ```
 
@@ -78,11 +80,17 @@ python scripts/03_run_optimization.py
 python scripts/04_evaluate_roi.py
 python scripts/05_export_dashboard.py
 
-# 대시보드 (터미널 2개)
-cp .env.example .env          # DATA_GO_KR_SERVICE_KEY 채우기
-python dashboard/app.py       # 터미널 A
-python dashboard/sender.py    # 터미널 B
+# 대시보드 — 전기료·CO2 (터미널 2개)
+cp .env.example .env             # DATA_GO_KR_SERVICE_KEY 채우기
+python dashboard/app.py          # 터미널 A → http://127.0.0.1:5001
+python dashboard/sender.py       # 터미널 B (실시간 송신)
+
+# 대시보드 — 공정 흐름 (별도 포트, 터미널 1개)
+python dashboard/process_app/app.py   # http://127.0.0.1:4444
 ```
+
+> 전기료·CO2(5001)와 공정(4444)은 **구현 형식이 달라 별도 앱**으로 각각 실행합니다.
+> 통합이 필요하면 리버스 프록시(Nginx 등)로 한 진입점 뒤에 두는 방식을 권장합니다.
 
 ## 요금 시나리오 (config/electricity_config_master.json)
 
