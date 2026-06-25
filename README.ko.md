@@ -12,6 +12,67 @@
 
 ![PeakShield 아키텍처](docs/architecture.png)
 
+graph TD
+    %% 스타일 정의
+    classDef input fill:#ECEFF1,stroke:#607D8B,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef process fill:#E3F2FD,stroke:#2196F3,stroke-width:2px;
+    classDef model fill:#EDE7F6,stroke:#673AB7,stroke-width:2px;
+    classDef engine fill:#FFF3E0,stroke:#FF9800,stroke-width:2px;
+    classDef economics fill:#E8F5E9,stroke:#4CAF50,stroke-width:2px;
+    classDef ui fill:#FCE4EC,stroke:#E91E63,stroke-width:2px;
+
+    %% 1단계: Data Ingestion
+    subgraph Layer_1 [1. Data Ingestion & Configuration]
+        A[UCI Steel Industry Energy Data <br> 15-min / 35,040 rows]:::input
+        B[electricity_config_master.json <br> KEPCO Tariff Scenarios]:::input
+    end
+
+    %% 2단계: Feature Engineering
+    subgraph Layer_2 [2. Feature Engineering & Contextual Logic]
+        C1[Cyclic Features <br> Month_sin/cos, DayOfWeek_sin/cos]:::process
+        C2[Electrical Physics Features <br> Apparent_Power, PF_Physical]:::process
+        C3[Contextual Imputation & Status Flag <br> CO2 RF Imputation, Is_Operating_Flag]:::process
+        C4[Operational Health Index <br> PSI: Process Stress Index]:::process
+    end
+    A --> C1 & C2 & C3
+    C2 & C3 --> C4
+
+    %% 3단계: Predictive Surrogate Modeling
+    subgraph Layer_3 [3. Predictive Surrogate Modeling]
+        D[XGBoost Regressor <br> with Monotonic Constraints]:::model
+        E[Target Predictions <br> Usage_kWh, PF_Physical]:::model
+    end
+    C1 & C2 & C3 --> D
+    D --> E
+
+    %% 4단계: Hybrid Optimization Engine
+    subgraph Layer_4 [4. Digital Twin Simulation & Optimization]
+        F[HybridFastSimulator <br> Optuna Scheduler Engine]:::engine
+        G[Optimal Actuator Operations <br> Motor x Capacitor Scheduling]:::engine
+        H{Key Results <br> Peak Shaving: 660kW ➔ 590kW <br> PF Penalty Hours Reduction}:::engine
+    end
+    B --> F
+    E --> F
+    F --> G
+    G --> H
+
+    %% 5단계: Economic Settlement
+    subgraph Layer_5 [5. Economic Settlement & Business ROI]
+        I[KEPCO Billing Settlement <br> 2018 vs 2026 Tariff Engine]:::economics
+        J[ROI Breakdown <br> Base & Energy Cost Savings <br> Carbon Credit CO2/ETS Benefit <br> Offset: Night Labor Premium]:::economics
+    end
+    H --> I
+    I --> J
+
+    %% 6단계: Visualization Serving
+    subgraph Layer_6 [6. Application Serving & User UI]
+        K[Local Web Dashboard <br> Flask / Docker Component]:::ui
+        L[Multi-Tab Monitoring UI <br> 1. Energy | 2. Process | 3. CO2]:::ui
+    end
+    J --> K
+    K --> L
+    
+
 ---
 
 ## 프로젝트 구조
