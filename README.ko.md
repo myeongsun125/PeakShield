@@ -10,68 +10,7 @@
 
 ## 시스템 아키텍처
 
-![PeakShield 아키텍처](docs/architecture.png)
-
-graph TD
-    %% 스타일 정의
-    classDef input fill:#ECEFF1,stroke:#607D8B,stroke-width:2px,stroke-dasharray: 5 5;
-    classDef process fill:#E3F2FD,stroke:#2196F3,stroke-width:2px;
-    classDef model fill:#EDE7F6,stroke:#673AB7,stroke-width:2px;
-    classDef engine fill:#FFF3E0,stroke:#FF9800,stroke-width:2px;
-    classDef economics fill:#E8F5E9,stroke:#4CAF50,stroke-width:2px;
-    classDef ui fill:#FCE4EC,stroke:#E91E63,stroke-width:2px;
-
-    %% 1단계: Data Ingestion
-    subgraph Layer_1 [1. Data Ingestion & Configuration]
-        A[UCI Steel Industry Energy Data <br> 15-min / 35,040 rows]:::input
-        B[electricity_config_master.json <br> KEPCO Tariff Scenarios]:::input
-    end
-
-    %% 2단계: Feature Engineering
-    subgraph Layer_2 [2. Feature Engineering & Contextual Logic]
-        C1[Cyclic Features <br> Month_sin/cos, DayOfWeek_sin/cos]:::process
-        C2[Electrical Physics Features <br> Apparent_Power, PF_Physical]:::process
-        C3[Contextual Imputation & Status Flag <br> CO2 RF Imputation, Is_Operating_Flag]:::process
-        C4[Operational Health Index <br> PSI: Process Stress Index]:::process
-    end
-    A --> C1 & C2 & C3
-    C2 & C3 --> C4
-
-    %% 3단계: Predictive Surrogate Modeling
-    subgraph Layer_3 [3. Predictive Surrogate Modeling]
-        D[XGBoost Regressor <br> with Monotonic Constraints]:::model
-        E[Target Predictions <br> Usage_kWh, PF_Physical]:::model
-    end
-    C1 & C2 & C3 --> D
-    D --> E
-
-    %% 4단계: Hybrid Optimization Engine
-    subgraph Layer_4 [4. Digital Twin Simulation & Optimization]
-        F[HybridFastSimulator <br> Optuna Scheduler Engine]:::engine
-        G[Optimal Actuator Operations <br> Motor x Capacitor Scheduling]:::engine
-        H{Key Results <br> Peak Shaving: 660kW ➔ 590kW <br> PF Penalty Hours Reduction}:::engine
-    end
-    B --> F
-    E --> F
-    F --> G
-    G --> H
-
-    %% 5단계: Economic Settlement
-    subgraph Layer_5 [5. Economic Settlement & Business ROI]
-        I[KEPCO Billing Settlement <br> 2018 vs 2026 Tariff Engine]:::economics
-        J[ROI Breakdown <br> Base & Energy Cost Savings <br> Carbon Credit CO2/ETS Benefit <br> Offset: Night Labor Premium]:::economics
-    end
-    H --> I
-    I --> J
-
-    %% 6단계: Visualization Serving
-    subgraph Layer_6 [6. Application Serving & User UI]
-        K[Local Web Dashboard <br> Flask / Docker Component]:::ui
-        L[Multi-Tab Monitoring UI <br> 1. Energy | 2. Process | 3. CO2]:::ui
-    end
-    J --> K
-    K --> L
-    
+![PeakShield 아키텍처](presentation/1_PeakShield_Architecture_final_ko.png)
 
 ---
 
@@ -179,3 +118,11 @@ python dashboard/process_app/app.py   # 공정 서버 → http://127.0.0.1:4444
   (`economics.calculate_advanced_financial_roi`)와 **독립적인 정밀 정산 도구**입니다.
 - 한글 차트 폰트는 EDA·시각화에서만 필요합니다(`src`는 plot 미포함).
 - 대시보드의 공공데이터 인증키는 환경변수(`DATA_GO_KR_SERVICE_KEY`)로 분리되어 있습니다.
+
+## 팀 & 기여
+
+3인 팀. 데이터/디지털 트윈 · 경제성/프론트엔드 · 모델링으로 역할 분담.
+
+- **김명선 ([@myeongsun125](https://github.com/myeongsun125))** — 프로젝트 리드 & 데이터/디지털 트윈. 팀을 이끌며 프로젝트 방향을 주도. 기술 기여: 피처 엔지니어링(결측치 보간·공정상태 모델링), EDA·데이터 시각화, SVG 기반 디지털 트윈 공정 탭, UI 아키텍처 설계.
+- **송병갑 ([@sbg0700](https://github.com/sbg0700))** — 경제성 엔진 & 프론트엔드. 타겟 피처 엔지니어링, KEPCO 전기요금 산출 함수, 탄소배출권 가격 API 연동, 대시보드 프론트엔드(전기료·탄소 탭).
+- **권영민 ([@Kwonym0814](https://github.com/Kwonym0814))** — 모델링 & 최적화. XGBoost 대리모델 하이퍼파라미터 탐색(Grid-search · Optuna), 모델 파인튜닝.

@@ -12,7 +12,7 @@ ordered entry-point scripts.
 
 ## System Architecture
 
-![PeakShield architecture](docs/architecture.png)
+![PeakShield architecture](presentation/1_PeakShield_Architecture_final_en.png)
 
 ---
 
@@ -51,7 +51,7 @@ PeakShield/
 │   ├─ static/  templates/
 │   └─ process_app/   # process-flow server :4444 (embedded by the 5001 Process tab)
 │       ├─ app.py  static/  templates/
-├─ docs/           # architecture diagram (+ generator script)
+├─ presentation/   # architecture diagrams (en / ko)
 └─ notebooks/      # exploratory (EDA) / visualization notebooks
 ```
 
@@ -124,4 +124,11 @@ power-factor rules `pf_logic` (lag/lead target, active hours), and `additional_f
 - Korean chart fonts are only needed for EDA/visualization (`src` has no plotting).
 - The dashboard's public-data API key is kept in an environment variable
   (`DATA_GO_KR_SERVICE_KEY`), never hardcoded.
-- Regenerate the architecture diagram with `python docs/make_architecture.py`.
+
+## Team & Contributions
+
+A 3-person team, split across data/digital-twin, economics & frontend, and modeling.
+
+- **Myeongseon Kim ([@myeongsun125](https://github.com/myeongsun125))** — Project lead & data/digital-twin. Led the team and overall project direction. Technical work: feature engineering (missing-value imputation, process-state modeling), EDA & data visualization, the SVG-based digital-twin process tab, and the UI architecture.
+- **Byeonggab Song ([@sbg0700](https://github.com/sbg0700))** — Economics engine & frontend. Target feature engineering, the KEPCO electricity-cost functions, carbon-credit price API integration, and the dashboard frontend (electricity & carbon tabs).
+- **Youngmin Kwon ([@Kwonym0814](https://github.com/Kwonym0814))** — Modeling & optimization. XGBoost surrogate hyperparameter search (Grid-search · Optuna) and model fine-tuning.
